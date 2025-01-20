@@ -1,9 +1,9 @@
 #include "pe_editor/PdbReader.h"
 
-#include "PDB.h"
-#include "PDB_DBIStream.h"
-#include "PDB_InfoStream.h"
-#include "PDB_RawFile.h"
+#include "raw_pdb/PDB.h"
+#include "raw_pdb/PDB_DBIStream.h"
+#include "raw_pdb/PDB_InfoStream.h"
+#include "raw_pdb/PDB_RawFile.h"
 
 #include "PeEditor.h"
 
@@ -14,20 +14,21 @@ struct Handle {
     HANDLE file;
     HANDLE fileMapping;
     void*  baseAddress;
+    size_t len;
 };
 
 MemoryMappedFile::Handle Open(const wchar_t* path) {
     HANDLE file =
         CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, nullptr);
     if (file == INVALID_HANDLE_VALUE) {
-        return Handle{INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE, nullptr};
+        return Handle{INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE, nullptr, 0};
     }
 
     HANDLE fileMapping = CreateFileMappingW(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
     if (fileMapping == nullptr) {
         CloseHandle(file);
 
-        return Handle{INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE, nullptr};
+        return Handle{INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE, nullptr, 0};
     }
 
     void* baseAddress = MapViewOfFile(fileMapping, FILE_MAP_READ, 0, 0, 0);
@@ -35,10 +36,24 @@ MemoryMappedFile::Handle Open(const wchar_t* path) {
         CloseHandle(fileMapping);
         CloseHandle(file);
 
-        return Handle{INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE, nullptr};
+        return Handle{INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE, nullptr, 0};
     }
 
-    return Handle{file, fileMapping, baseAddress};
+    BY_HANDLE_FILE_INFORMATION fileInformation;
+    const bool                 getInformationResult = GetFileInformationByHandle(file, &fileInformation);
+    if (!getInformationResult) {
+        UnmapViewOfFile(baseAddress);
+        CloseHandle(fileMapping);
+        CloseHandle(file);
+
+        return Handle{INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE, nullptr, 0};
+    }
+
+    const size_t fileSizeHighBytes = static_cast<size_t>(fileInformation.nFileSizeHigh) << 32;
+    const size_t fileSizeLowBytes  = fileInformation.nFileSizeLow;
+    const size_t fileSize          = fileSizeHighBytes | fileSizeLowBytes;
+
+    return Handle{file, fileMapping, baseAddress, fileSize};
 }
 
 
@@ -149,7 +164,7 @@ std::unique_ptr<std::deque<PdbSymbol>> loadPDB(const wchar_t* pdbPath) {
     if (!pdbFile.baseAddress) {
         return nullptr;
     }
-    if (IsError(PDB::ValidateFile(pdbFile.baseAddress))) {
+    if (IsError(PDB::ValidateFile(pdbFile.baseAddress, pdbFile.len))) {
         MemoryMappedFile::Close(pdbFile);
         return nullptr;
     }

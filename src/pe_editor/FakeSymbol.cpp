@@ -2,27 +2,35 @@
 
 #include "demangler/MicrosoftDemangle.h"
 
+bool consume_front(std::string_view& str, std::string_view substr) {
+    if (str.starts_with(substr)) {
+        str.remove_prefix(substr.size());
+        return true;
+    }
+    return false;
+}
+
 namespace pe_editor::FakeSymbol {
 
-inline demangler::ms_demangle::SpecialIntrinsicKind consumeSpecialIntrinsicKind(StringView& MangledName) {
+inline demangler::ms_demangle::SpecialIntrinsicKind consumeSpecialIntrinsicKind(std::string_view& MangledName) {
     using namespace demangler::ms_demangle;
     using namespace demangler;
-    if (MangledName.consumeFront("?_7")) return SpecialIntrinsicKind::Vftable;
-    if (MangledName.consumeFront("?_8")) return SpecialIntrinsicKind::Vbtable;
-    if (MangledName.consumeFront("?_9")) return SpecialIntrinsicKind::VcallThunk;
-    if (MangledName.consumeFront("?_A")) return SpecialIntrinsicKind::Typeof;
-    if (MangledName.consumeFront("?_B")) return SpecialIntrinsicKind::LocalStaticGuard;
-    if (MangledName.consumeFront("?_C")) return SpecialIntrinsicKind::StringLiteralSymbol;
-    if (MangledName.consumeFront("?_P")) return SpecialIntrinsicKind::UdtReturning;
-    if (MangledName.consumeFront("?_R0")) return SpecialIntrinsicKind::RttiTypeDescriptor;
-    if (MangledName.consumeFront("?_R1")) return SpecialIntrinsicKind::RttiBaseClassDescriptor;
-    if (MangledName.consumeFront("?_R2")) return SpecialIntrinsicKind::RttiBaseClassArray;
-    if (MangledName.consumeFront("?_R3")) return SpecialIntrinsicKind::RttiClassHierarchyDescriptor;
-    if (MangledName.consumeFront("?_R4")) return SpecialIntrinsicKind::RttiCompleteObjLocator;
-    if (MangledName.consumeFront("?_S")) return SpecialIntrinsicKind::LocalVftable;
-    if (MangledName.consumeFront("?__E")) return SpecialIntrinsicKind::DynamicInitializer;
-    if (MangledName.consumeFront("?__F")) return SpecialIntrinsicKind::DynamicAtexitDestructor;
-    if (MangledName.consumeFront("?__J")) return SpecialIntrinsicKind::LocalStaticThreadGuard;
+    if (consume_front(MangledName, "?_7")) return SpecialIntrinsicKind::Vftable;
+    if (consume_front(MangledName, "?_8")) return SpecialIntrinsicKind::Vbtable;
+    if (consume_front(MangledName, "?_9")) return SpecialIntrinsicKind::VcallThunk;
+    if (consume_front(MangledName, "?_A")) return SpecialIntrinsicKind::Typeof;
+    if (consume_front(MangledName, "?_B")) return SpecialIntrinsicKind::LocalStaticGuard;
+    if (consume_front(MangledName, "?_C")) return SpecialIntrinsicKind::StringLiteralSymbol;
+    if (consume_front(MangledName, "?_P")) return SpecialIntrinsicKind::UdtReturning;
+    if (consume_front(MangledName, "?_R0")) return SpecialIntrinsicKind::RttiTypeDescriptor;
+    if (consume_front(MangledName, "?_R1")) return SpecialIntrinsicKind::RttiBaseClassDescriptor;
+    if (consume_front(MangledName, "?_R2")) return SpecialIntrinsicKind::RttiBaseClassArray;
+    if (consume_front(MangledName, "?_R3")) return SpecialIntrinsicKind::RttiClassHierarchyDescriptor;
+    if (consume_front(MangledName, "?_R4")) return SpecialIntrinsicKind::RttiCompleteObjLocator;
+    if (consume_front(MangledName, "?_S")) return SpecialIntrinsicKind::LocalVftable;
+    if (consume_front(MangledName, "?__E")) return SpecialIntrinsicKind::DynamicInitializer;
+    if (consume_front(MangledName, "?__F")) return SpecialIntrinsicKind::DynamicAtexitDestructor;
+    if (consume_front(MangledName, "?__J")) return SpecialIntrinsicKind::LocalStaticThreadGuard;
     return SpecialIntrinsicKind::None;
 }
 
@@ -30,10 +38,10 @@ inline demangler::ms_demangle::SpecialIntrinsicKind consumeSpecialIntrinsicKind(
 std::optional<std::string> getFakeSymbol(const std::string& fn, bool removeVirtual) {
     using namespace demangler::ms_demangle;
     using namespace demangler;
-    Demangler  demangler;
-    StringView name(fn.c_str());
+    Demangler        demangler;
+    std::string_view name(fn.c_str());
 
-    if (!name.consumeFront('?')) return std::nullopt;
+    if (!consume_front(name, "?")) return std::nullopt;
 
     SpecialIntrinsicKind specialIntrinsicKind = consumeSpecialIntrinsicKind(name);
 
@@ -70,7 +78,7 @@ std::optional<std::string> getFakeSymbol(const std::string& fn, bool removeVirtu
         if (modified) {
             std::string fakeSymbol   = fn;
             std::string fakeFuncNode = funcNode.toString();
-            size_t      offset       = fn.size() - funcNode.pos->size();
+            size_t      offset       = fn.size() - funcNode.pos.size();
             fakeSymbol.erase(offset, funcNodeSize);
             fakeSymbol.insert(offset, fakeFuncNode);
             return fakeSymbol;
@@ -89,7 +97,7 @@ std::optional<std::string> getFakeSymbol(const std::string& fn, bool removeVirtu
         if (modified) {
             std::string fakeSymbol       = fn;
             char        fakeStorageClass = storageClass.toChar();
-            size_t      offset           = fn.size() - storageClass.pos->size();
+            size_t      offset           = fn.size() - storageClass.pos.size();
             fakeSymbol[offset]           = fakeStorageClass;
             return fakeSymbol;
         }

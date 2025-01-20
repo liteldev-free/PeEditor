@@ -1,9 +1,12 @@
 add_rules("mode.debug", "mode.release")
 
-set_policy("package.requires_lock", true)
 add_repositories("liteldev-repo https://github.com/LiteLDev/xmake-repo.git")
 
+set_allowedplats("windows")
+set_allowedarchs("x64")
+
 add_requires("llvm-prebuilt 18.1.1")
+
 add_requires("raw_pdb")
 add_requires("cxxopts")
 add_requires("fmt")

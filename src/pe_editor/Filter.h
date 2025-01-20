@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "ctre.hpp"
+#include "ctre/ctre.hpp"
 
 namespace pe_editor::filter {
 const std::vector<std::string> prefix = {

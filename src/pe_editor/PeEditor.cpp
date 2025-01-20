@@ -221,8 +221,6 @@ int generateSymbolListFile() {
             fn.name.c_str(),
             nullptr,
             nullptr,
-            nullptr,
-            nullptr,
             (demangler::MSDemangleFlags)(demangler::MSDF_NoCallingConvention | demangler::MSDF_NoAccessSpecifier)
         );
 
