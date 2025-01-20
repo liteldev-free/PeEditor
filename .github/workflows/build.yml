@@ -7,14 +7,7 @@ env:
 on:
   push:
     paths:
-      - "**.cpp"
-      - "**.cc"
-      - "**.cxx"
-      - "**.c"
-      - "**.hpp"
-      - "**.hh"
-      - "**.hxx"
-      - "**.h"
+      - "src/**"
       - ".github/workflows/build.yml"
       - "**/xmake.lua"
   pull_request:
@@ -82,7 +75,7 @@ jobs:
           mv peeditor-${{ env.VERSION }}-windows-amd64 artifacts/
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: peeditor-${{ env.VERSION }}-windows-amd64
           path: artifacts
@@ -114,7 +107,7 @@ jobs:
         shell: bash
 
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           append_body: true
           files: |
